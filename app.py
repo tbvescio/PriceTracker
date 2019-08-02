@@ -1,23 +1,69 @@
 from bs4 import BeautifulSoup
-import requests, smtplib, config, pymysql, config
-from flask import Flask, render_template, request
+import requests, smtplib, config, pymysql, config, time 
+from flask import Flask, render_template, request, abort
+
 
 app = Flask(__name__)
 
-db = pymysql.connect(config.host, config.user, config.password, config.table)
 
 ### FLASK ### 
 @app.route('/', methods=['POST', 'GET'])
 def index():
     if request.method == 'POST':
         url = request.form['url']
+        mail = request.form['mail']
+        
+
+        try: #comprueba que la url sea valida
+            price = check_price(url)
+        except:
+            abort(404)
+
+
+        save_sql(url,price,mail) #guarda los datos
         
         
-        txt_write(url) #guarda la url en el txt
         return render_template("index.html")
 
     return render_template("index.html")
    
+
+
+def save_sql(url, price,mail):
+    try:
+        db = pymysql.connect(config.host, config.user, config.password, config.table)
+        cursor = db.cursor()
+        sql = "INSERT INTO price(ID,URL,PRICE,MAIL) VALUES (ID, '{}', {}, '{}')".format(url,price,mail)
+        cursor.execute(sql)
+        db.commit()
+        cursor.close
+
+        return "SAVED"
+    except:
+        return "NOT! SAVED"
+
+
+def get_row(id):
+    db = pymysql.connect(config.host, config.user, config.password, config.table)
+    cursor = db.cursor()
+    sql = "select * from price where ID = {}".format(id)
+    cursor.execute(sql)
+    row = cursor.fetchone() #devuelve una lista
+    db.commit()
+    cursor.close
+    row = row[1:] #selecciona todo menos el id
+    return row
+
+
+def get_ids():
+    db = pymysql.connect(config.host, config.user, config.password, config.table)
+    cursor = db.cursor()
+    sql = "SELECT COUNT(*) FROM price" #devuelve cuantas rows hay
+    cursor.execute(sql)
+    ids = cursor.fetchone()[0]
+    db.commit()
+    cursor.close
+    return ids
 
 
 
@@ -28,32 +74,22 @@ def check_price(url):
     price= soup.find('span', {'class':'price-tag-fraction'}).get_text()
     return price
 
-def txt_write(url):
-    url_file = open("url.txt", "a")
-    
-    url_file.write(url)
-    url_file.write("\n")
-    url_file.close()
-    return "###URL SAVED###"
 
-def txt_read():
-    url_file = open("url.txt", "r")
-    url_list = []
-    for x in url_file:
-        url_list.append(x)
-
-    return url_list #return lista
 
 
 def main():
-    url_list = txt_read()
-    for x in range(1,len(url_list)):
-        input(url_list[x])
-        #check precio de url en poscion x
-        print(check_price(url_list[x])) 
+    ids = get_ids()
+    for i in (1,ids+1): 
+        row = get_row(i)
+        price = check_price(row[0])
+        
+        
+        if int(price) != row[1]: #compara el precio nuevo con viejo 
+            
+
 
 main()
-    
+
     
 
 
