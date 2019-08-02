@@ -94,7 +94,7 @@ def main():
             row = get_row(i)
             price = check_price(row[0])
             
-            if int(price) > row[1]: #compara el precio nuevo con viejo 
+            if int(price) < row[1]: #compara el precio nuevo con viejo 
                 send_email(row[2], row[0]) #dir. email , url
         
         return
