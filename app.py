@@ -71,24 +71,37 @@ def check_price(url):
     url = url
     resp = requests.get(url)
     soup = BeautifulSoup(resp.text,features="html.parser")
+    #elemento html que parsea
     price= soup.find('span', {'class':'price-tag-fraction'}).get_text()
     return price
 
+def send_email(mail, url):
+    server = smtplib.SMTP_SSL('smtp.gmail.com', 465)
+    server.login(config.username, config.password_mail)
+    msg_url = "THE PRICE IS LOWER!\n {}".format(url) #envia el msg + la url
+    server.sendmail("pythonscript640@gmail.com", 
+                    mail, #dirrecion a la que manda
+                    msg_url)
+    server.quit()
+    return
 
 
 
 def main():
-    ids = get_ids()
-    for i in (1,ids+1): 
-        row = get_row(i)
-        price = check_price(row[0])
-        
-        
-        if int(price) != row[1]: #compara el precio nuevo con viejo 
+    while True:
+        ids = get_ids()
+        for i in (1,ids+1): #recorre todo las entradas
+            row = get_row(i)
+            price = check_price(row[0])
             
+            if int(price) > row[1]: #compara el precio nuevo con viejo 
+                send_email(row[2], row[0]) #dir. email , url
+        
+        return
+        time.sleep(600) #espera 10 min
 
 
-main()
+
 
     
 
@@ -97,3 +110,4 @@ main()
 
 if __name__ == "__main__":
     app.run(debug=True)
+    main()
